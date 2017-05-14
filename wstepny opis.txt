@@ -1,0 +1,12 @@
+Autor: Aleksander Kania
+Rodzaj projektu: gra komputerowa dla jednego gracza
+
+Będzie to prosta gra przypominająca popularną grę Arkanoid. Na dwuwymiarowym polu gry znajdują się bloki, zaś zadaniem gracza jest zbicie wszystkich bloków. Sterując odpowiednio położoną u dołu planszy platformą odbija piłeczkę, która przy zetknięciu z blokiem niszczy go lub zmniejsza jego wytrzymałość (czyli liczbę pozostałych uderzeń, które są potrzebne do usunięcia bloku z pola gry).
+
+Korzystać będę z dziedziczenia. Utworzona zostanie nadrzędna, abstrakcyjna klasa blok, po której dziedziczyć będą różne rodzaje bloków. Bloki będą miały różne kolory oraz wytrzymałość. Z niektórych bloków będą wypadały bonusy, które będą opadały w dół. Jeśli gracz najedzie paletką na bonus, zostanie on aktywowany. Różne bonusy będą w różny sposób wpływać na rozgrywkę - ułatwiając ją lub utrudniając. Przykładowo jeden bonus będzie zwiększał liczbę żyć, inny zaś będzie zmniejszał ich liczbę.
+
+Gracz będzie miał określoną liczbę żyć. Każde wypadnięcie piłki poza planszę spowoduje utratę jednego życia. Utrata wszystkich spowoduje koniec rozgrywki z możliwością ponownej gry. 
+
+Plansza będzie wczytywana z pliku. Plik będzie zawierał na początku preambułę określającą liczbę poszczególnych rodzajów bloków oraz liczbę żyć. Kolejne dane będą opisywały położenie poszczególnych bloków na planszy. 
+
+ 
