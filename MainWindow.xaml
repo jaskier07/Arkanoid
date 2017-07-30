@@ -1,0 +1,34 @@
+﻿<Window x:Class="Arkanoid.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Arkanoid"
+        mc:Ignorable="d"
+        Title="Arkanoid"
+        KeyDown="HandleKeydown"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanMinimize">
+    
+    <DockPanel Name="myDockPanel" Background="Gray" >
+        <Border DockPanel.Dock="Top" Name="DockPanelTop">
+            <Menu Name="MainMenu" IsMainMenu="True" FontSize="18" FontFamily="Cambria">
+                <MenuItem Header="Plik">
+                    <MenuItem Header="Nowa gra" FontSize="13" Click="StartNewGame"/>
+                    <MenuItem Header="Edytor Poziomów" FontSize="13" Click="OpenLevelEditor"/>
+                    <Separator/>
+                    <MenuItem Header="Zamknij" FontSize="13" Click="CloseApplication"/>
+                </MenuItem>
+                <MenuItem Name="menuLevels" Header="Wczytaj poziom" />
+                <MenuItem Name="bonusName" Width="400" Header="Brak aktywnych bonusów." />
+            </Menu>
+        </Border>
+        <Border Name="dockPanelGame">
+            <Canvas Name="canvasGame">
+                <Rectangle Name="platformRect"/>
+                <Ellipse Canvas.ZIndex="2" Name="ballCircle"/>
+            </Canvas>
+        </Border>
+    </DockPanel>
+</Window>
