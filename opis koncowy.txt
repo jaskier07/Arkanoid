@@ -1,0 +1,46 @@
+Link do filmiku na YouTube:
+https://youtu.be/H2gFyjaCYVc
+
+1. WYŚWIETLANIE
+Prawie każdy wyświetlany obiekt jest reprezentowany w grze poprzez obiekt typu Shape (Ellipse w przypadku piłki, pozostałych przypadkach Rectangle). W InitializeShape() ustawiane są jego wymiary oraz obrazek tła.
+
+Aby zapewnić odpowiednią hierarchię wyświetlanych elementów, większość z nich korzysta z Canvas.SetZIndex(). Określony zostaje w ten sposób priorytet wyświetlania - kształt o najwyższej wartości ZIndex będzie wyświetlany ponad innymi kształtami. Dzięki temu np. spadający bonus wyświetlany jest ponad blokiem, ale za piłką.
+
+Wszystkie elementy wyświetlane na ekranie gry są dodawane do obiektu Canvas canvasGame. Dlatego, aby poprawnie wyświetlić komunikat, należy usunąć z niego wszystkie elementy świata gry. Najpierw wywoływana jest funkcja ClearVisibleElements() usuwająca z canvasGame takie elementy jak kształty paletki, piłki, skrzyni, bloków, bonusów i żyć. Następnie wywoływana jest funkcja ShowMenuFailure() lub ShowMenuWin(), w których następuje zmiana tła oraz dodanie do canvasGame elementów menu (np. komunikatu "Wygrałeś!" czy też comboBoxa wyboru poziomu).
+
+Okno aplikacji wyświetlane jest na środku ekranu monitora, jego skalowanie zostało zablokowane. Zalecane jest uruchamianie aplikacji w rozdzielczości minimum 1920 na 1080.
+
+2. MECHANIKA GRY - wyszukiwanie poziomów, serializacja, ruch piłki, działanie skrzyni zwycięstwa
+Podczas uruchamiania aplikacji w funkcji FindLevels() przy pomocy klasy Directory wczytywane są zapisane poziomy, znajdujące się w katalogu levels. Do tablicy stringów wczytywane są wszystkie nazwy plików znajdujących się w tym katalogu. Nastepnie zostają wyselekcjonowane te, które mają końcówkę _dat, a potem z tak powstałego stringa usuwane jest rozszerzenie i ścieżka. W ten sposób otrzymywana jest nazwa poziomu, która następnie staje się polem Header dla nowoutworzonego elementu MenuItem. Takich elementów jest tyle, ile wczytano poziomów. Stają się one dziećmi elementu belki MenuItem o nazwie menuLevel, dzięki czemu po kliknięciu w niego pojawi się lista dostępnych poziomów.
+
+Utworzyłem klasę SerializableBlock, której zadaniem jest przechowywanie podstawowych informacji o serializowanych blokach. Podczas zapisywania etapu w edytorze poziomów następuje przepisanie bloków typu BlockButton na obiekty typu SerializableBlock. Tworzona jest lista tych obiektów, i następnie jest ona serializowana. Podczas wczytywania poziomu lista ulega deserializacji, zaś jej elementy - typu SerializableBlock - zamieniane są na obiekty klas pochodnych klasy Block.
+
+Zapisany poziom składa się z dwóch zserializowanych plików .xml. Pierwszy - nagłówkowy, z końcówką "_dat" - przechowuje liczbę bloków każdego rodzaju (np. ile jest bloków typu Grass, Brick itd) oraz liczbę żyć przewidzianą na poziom. W drugim pliku (z końcówką "_blc") znajduje się zserializowana lista bloków.
+
+Podczas wykrywania kolizji w poziomie używana jest funkcja FindCollidingBlock(). Jej zmienna lokalna newPosy wyznacza wysokość, na jakiej znajdzie się piłka po wykonaniu ruchu. Po podzieleniu newPosy przez wysokość bloku otrzymywany jest numer wiersza siatki bloków, na którym znajdzie się piłka. Dla wszystkich bloków z tego wiersza nastąpi sprawdzenie, czy piłka wejdzie z którymś z nich w kolizję. Kolizja została szczegółowo opisana w komentarzach w kodzie.
+
+Piłka poruszając się po skosie, normalnie poruszałaby się szybciej. Aby tego uniknąć, w funkcji CorrectVelocity(), jeśli prędkośc piłki w poziomie jest znaczna, zmniejszam ją proporcjonalnie do jej wartości.
+
+Skrzynia zwycięstwa jest domyślnie zamknięta. Kiedy zostaje otwarta, zmienia się jej obrazek. Aby wygrać, gracz musi trafić piłką w jej dolną krawędź na planszy.
+
+3. OBSŁUGA KLAWIATURY
+W głównym oknie programu:
+e - otworzenie edytora poziomów
+p - wznowienie / zatrzymanie gry; uruchomienie edytora poziomów powoduje natychmiastowe zatrzymanie gry
+n - rozpoczęcie bieżącego poziomu od nowa
+
+W edytorze poziomów:
+enter - zapisanie poziomu
+
+4. POZOSTAŁE KLASY
+Klasa BlockButton ziedziczy po klasie Button. Reprezentuje blok na siatce bloków. Pola gridx i gridy opisują położenie na tej siatce. Po kliknięciu na element siatki (przycisk BlockButton) pojawia się obrazek trawy, reprezentujący ustawienie w tym miejscu bloku typu GreenBlock. Kolejne kliknięcia powodują zamianę poprzedniego obrazka na inny, reprezentujący inny typ bloku. Po odpowiedniej liczbie kliknięć pojawia się na powrót blok pusty, reprezentujący puste miejsce na planszy.
+
+Klasa Position ułatwia wykrywanie kolizji. Jej funkcje zwracają położenie krawędzi obiektu.
+ty() - (top y) - zwraca położenie na osi Y górnej krawędzi obiektu
+by() - (bottom y) - zwraca położenia na osi Y dolnej krawędzi obiektu
+lx() - (left x) - zwraca położenie na osi X lewej krawędzi obiektu
+rx() - (right x) - zwraca położenie na osi X prawej krawędzi obiektu.
+Dzięki temu łatwo jest określić punkty graniczne obiektu - np. lewy górny róg jest reprezentowany przez ty() i lx().
+
+Klasa Point reprezentuje punkt - posiada jedynie pola x, y.
+
