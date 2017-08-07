@@ -1,46 +1,161 @@
 Link do filmiku na YouTube:
 https://youtu.be/H2gFyjaCYVc
 
-1. WYŚWIETLANIE
-Prawie każdy wyświetlany obiekt jest reprezentowany w grze poprzez obiekt typu Shape (Ellipse w przypadku piłki, pozostałych przypadkach Rectangle). W InitializeShape() ustawiane są jego wymiary oraz obrazek tła.
+
+WSTĘP
+Program działa w dwóch oknach - oknie głównym (MainWindow) oraz wywoływanym z okna głównego edytorze poziomów (LevelEditor). Tutaj zostanie opisane działanie MainWindow, opis działania okna edytora poziomów znajduje się w punkcie VIII. W dalszej części opisu znajdują się nazwy plików w nawiasach kwadratowych. Oznaczam w ten sposób, jakiego pliku dotyczy znajdujący się pod jego nazwą opis.
+
+
+I. WYŚWIETLANIE
+[MainWindow.xaml]
+W MainWindow został zastosowany layout typu DockPanel. Pozwolił on na podzielenie ekranu na dwie części - belkę menu (DockPanelMenu) oraz pole gry. Poszczególne elementy menu są typu MenuItem, została im przypisana odpowiednia czcionka i jej wielkość. Dwa pierwsze elementy menu (Header = "Plik", Header = "menuLevels") zawierają własne elementy podmenu. W przypadku tego pierwszego są one zdefiniowane w pliku .xaml, w przypadku tego drugiego są dodawane dynamicznie w funkcji MainWindow.FindLevels(). 
+
+Pozostałą część okna stanowi pole gry. To tutaj wyświetlane jest menu główne w różnych wariantach (uruchomienie aplikacji lub komunikat o wygranej/przegranej) oraz sama gra. Wszystkie elementy wyświetlane na ekranie gry są dodawane do obiektu Canvas canvasGame. W czasie gry do takich elementów należą np. obrazki reprezentujące paletkę, piłkę, bloki, bonusy, skrzynię czy życia. Kiedy jakiś element powinien zniknąć z planszy - np. blok po zbiciu - jest usuwany z canvasGame. Aby poprawnie wyświetlić komunikat o wygranej lub porażce, należy usunąć z niego wszystkie elementy świata gry. Dzieje się to w funkcji GameController.ClearVisibleElements().
+
+W pliku MainWindow.xaml do obiektów Canvas należy prostokąt reprezentujący paletkę oraz elipsa reprezentująca piłkę. Pozostałe elementy gry tworzone są dynamicznie.
+
+Okno aplikacji wyświetlane jest na środku ekranu monitora (WindowStartupLocation="CenterScreen"), jego skalowanie zostało zablokowane (ResizeMode="CanMinimize"). Zalecane jest uruchamianie aplikacji w rozdzielczości minimum 1920 na 1080. Obsługa przycisków klawiatury odbywa się w funkcji MainWindow.HandleKeyDown() (KeyDown="HandleKeydown").
 
 Aby zapewnić odpowiednią hierarchię wyświetlanych elementów, większość z nich korzysta z Canvas.SetZIndex(). Określony zostaje w ten sposób priorytet wyświetlania - kształt o najwyższej wartości ZIndex będzie wyświetlany ponad innymi kształtami. Dzięki temu np. spadający bonus wyświetlany jest ponad blokiem, ale za piłką.
 
-Wszystkie elementy wyświetlane na ekranie gry są dodawane do obiektu Canvas canvasGame. Dlatego, aby poprawnie wyświetlić komunikat, należy usunąć z niego wszystkie elementy świata gry. Najpierw wywoływana jest funkcja ClearVisibleElements() usuwająca z canvasGame takie elementy jak kształty paletki, piłki, skrzyni, bloków, bonusów i żyć. Następnie wywoływana jest funkcja ShowMenuFailure() lub ShowMenuWin(), w których następuje zmiana tła oraz dodanie do canvasGame elementów menu (np. komunikatu "Wygrałeś!" czy też comboBoxa wyboru poziomu).
+II. URUCHOMIENIE APLIKACJI
+[MainWindow.xaml.cs]
+Aplikacja rozpoczyna się w konstruktorze MainWindow. Na początku nastepuje inicjalizacja kolorów (InitializeColors()), z których aplikacja może korzystać. Następnie w InitializeDockPanel() ustalane są wymiary DockPanelu, wysokość belki menu oraz kolory tła. W LoadPathsAndImages() przy pomocy klasy Directory ustalana jest ścieżka do głównego katalogu projektu, dzięki czemu potem łatwo można odwoływać się do jego podfolderów i zawartych w nim plików. Następnie wczytane zostają obrazki elementów świata gry, a w funkcji InitializeBackground() obrazki tła poszczególnych rodzajów menu. Tworzony jest prostokąt bgRectangle, którego tłem będą obrazki różnych rodzajów menu. Następnie menu jest rysowane - w zależności od obecnego stanu gry dobierane jest odpowiednie menu rysowane od punktu (0, 0).
 
-Okno aplikacji wyświetlane jest na środku ekranu monitora, jego skalowanie zostało zablokowane. Zalecane jest uruchamianie aplikacji w rozdzielczości minimum 1920 na 1080.
+Tworzony jest też obiekt klasy kontrolującej świat gry - GameController.
 
-2. MECHANIKA GRY - wyszukiwanie poziomów, serializacja, ruch piłki, działanie skrzyni zwycięstwa
-Podczas uruchamiania aplikacji w funkcji FindLevels() przy pomocy klasy Directory wczytywane są zapisane poziomy, znajdujące się w katalogu levels. Do tablicy stringów wczytywane są wszystkie nazwy plików znajdujących się w tym katalogu. Nastepnie zostają wyselekcjonowane te, które mają końcówkę _dat, a potem z tak powstałego stringa usuwane jest rozszerzenie i ścieżka. W ten sposób otrzymywana jest nazwa poziomu, która następnie staje się polem Header dla nowoutworzonego elementu MenuItem. Takich elementów jest tyle, ile wczytano poziomów. Stają się one dziećmi elementu belki MenuItem o nazwie menuLevel, dzięki czemu po kliknięciu w niego pojawi się lista dostępnych poziomów.
+W funkcji FindLevels() przy pomocy klasy Directory wczytywane są zapisane poziomy, znajdujące się w katalogu levels. Do tablicy stringów wczytywane są wszystkie nazwy plików znajdujących się w tym katalogu. Nastepnie zostają wyselekcjonowane te, które mają końcówkę _dat, a potem z tak powstałego stringa usuwane jest rozszerzenie i ścieżka. W ten sposób otrzymywana jest nazwa poziomu, która następnie staje się polem Header dla nowoutworzonego elementu MenuItem. Takich elementów jest tyle, ile wczytano poziomów. Stają się one dziećmi elementu belki MenuItem o nazwie menuLevel, dzięki czemu po kliknięciu w niego pojawi się lista dostępnych poziomów. Kliknięcie elemntu tej listy wywoła funkcję HandleLevelClick(), która zapisze nazwę wybranego poziomu oraz wywoła funkcję rozpoczynającą nową grę.
 
-Utworzyłem klasę SerializableBlock, której zadaniem jest przechowywanie podstawowych informacji o serializowanych blokach. Podczas zapisywania etapu w edytorze poziomów następuje przepisanie bloków typu BlockButton na obiekty typu SerializableBlock. Tworzona jest lista tych obiektów, i następnie jest ona serializowana. Podczas wczytywania poziomu lista ulega deserializacji, zaś jej elementy - typu SerializableBlock - zamieniane są na obiekty klas pochodnych klasy Block.
+InitializeMenuElements() tworzy elementy, które będą wyświetlane podczas wyświetlania menu. cBoxLevels to obiekt klasy ComboBox zawierający rozwijaną listę dostępnych poziomów. Po kliknięciu jednego z elementów tej listy wywołana zostanie funkcja ComboBoxSelectionHandler(). InfoLabel to obiekt klasy Label, w którym znajduje się tekst zachęcający gracza do wybrania poziomu ("Wybierz poziom"). TitleLabel to kolejny obiekt klasy Label, który zawiera tekst "PRZEGRAŁEŚ!" lub "WYGRAŁEŚ!".
 
-Zapisany poziom składa się z dwóch zserializowanych plików .xml. Pierwszy - nagłówkowy, z końcówką "_dat" - przechowuje liczbę bloków każdego rodzaju (np. ile jest bloków typu Grass, Brick itd) oraz liczbę żyć przewidzianą na poziom. W drugim pliku (z końcówką "_blc") znajduje się zserializowana lista bloków.
+ShowMenuElements() wyświetla wszystkie elementy menu. Jest wywoływana każdorazowo, gdy wyświetlane jest menu. Na początku czyści poprzednią listę poziomów (na wypadek, gdyby uległa ona zmianie na skutek utworzenia nowego poziomu w edytorze poziomów), potem dodaje nazwy poziomów jako elementy typu ComboBoxItem do cBoxLevels. Następnie wyświetla wspomniane cBoxLevels oraz infoLabel.
 
-Podczas wykrywania kolizji w poziomie używana jest funkcja FindCollidingBlock(). Jej zmienna lokalna newPosy wyznacza wysokość, na jakiej znajdzie się piłka po wykonaniu ruchu. Po podzieleniu newPosy przez wysokość bloku otrzymywany jest numer wiersza siatki bloków, na którym znajdzie się piłka. Dla wszystkich bloków z tego wiersza nastąpi sprawdzenie, czy piłka wejdzie z którymś z nich w kolizję. Kolizja została szczegółowo opisana w komentarzach w kodzie.
-
-Piłka poruszając się po skosie, normalnie poruszałaby się szybciej. Aby tego uniknąć, w funkcji CorrectVelocity(), jeśli prędkośc piłki w poziomie jest znaczna, zmniejszam ją proporcjonalnie do jej wartości.
-
-Skrzynia zwycięstwa jest domyślnie zamknięta. Kiedy zostaje otwarta, zmienia się jej obrazek. Aby wygrać, gracz musi trafić piłką w jej dolną krawędź na planszy.
-
-3. OBSŁUGA KLAWIATURY
+III. OBSŁUGA ZDARZEŃ
+[MainWindow.xaml.cs]
+Po naciśnięciu dowolnego klawisza wywoływana jest funkcja HandleKeydown(), w której w zależności od naciśniętego klawisza wykonana zostaje odpowiednia akcja. 
 W głównym oknie programu:
 e - otworzenie edytora poziomów
 p - wznowienie / zatrzymanie gry; uruchomienie edytora poziomów powoduje natychmiastowe zatrzymanie gry
 n - rozpoczęcie bieżącego poziomu od nowa
-
 W edytorze poziomów:
 enter - zapisanie poziomu
 
-4. POZOSTAŁE KLASY
-Klasa BlockButton ziedziczy po klasie Button. Reprezentuje blok na siatce bloków. Pola gridx i gridy opisują położenie na tej siatce. Po kliknięciu na element siatki (przycisk BlockButton) pojawia się obrazek trawy, reprezentujący ustawienie w tym miejscu bloku typu GreenBlock. Kolejne kliknięcia powodują zamianę poprzedniego obrazka na inny, reprezentujący inny typ bloku. Po odpowiedniej liczbie kliknięć pojawia się na powrót blok pusty, reprezentujący puste miejsce na planszy.
+ComboBoxSelectionHandler jest wywoływane po wybraniu jednego z poziomów z listy rozwijanej - wówczas cBoxLevels.SelectedItem zawiera ścieżkę do zaznaczonego poziomu. Jest z niej wyciągana sama nazwa pliku, która potem posłuży do otworzenia pliku z tym poziomem. Następnie następuje odznaczenie zaznaczenia oraz usunięcie z canvasGame elementów menu i rozpoczęcie nowej gry poprzez wywołanie StartNewGame().
 
-Klasa Position ułatwia wykrywanie kolizji. Jej funkcje zwracają położenie krawędzi obiektu.
+IV. TYPY POMOCNICZE
+[Position.cs]
+Struktura Position określa położenie obiektu oraz ułatwia wykrywanie kolizji. Jej funkcje zwracają położenie krawędzi obiektu.
 ty() - (top y) - zwraca położenie na osi Y górnej krawędzi obiektu
 by() - (bottom y) - zwraca położenia na osi Y dolnej krawędzi obiektu
 lx() - (left x) - zwraca położenie na osi X lewej krawędzi obiektu
 rx() - (right x) - zwraca położenie na osi X prawej krawędzi obiektu.
 Dzięki temu łatwo jest określić punkty graniczne obiektu - np. lewy górny róg jest reprezentowany przez ty() i lx().
 
+[Point.cs]
 Klasa Point reprezentuje punkt - posiada jedynie pola x, y.
+
+[GameController.cs]
+Zdefiniowane zostały 3 enumy:
+BlockTypes - określa typ bloku
+GameState - określa bieżący stan gry
+Bonuses - określa rodzaj bonusu.
+
+V. OBIEKTY ŚWIATA GRY
+[GameObject.cs]
+W abstrakcyjnej klasie GameObject zdefiniowane są pola opisujące każdy wyświetlany obiekt świata gry - obraz reprezentujący obiekt, referencję do GameControllera, kształt, obecną pozycję obiektu, jego wymiary. Jej metoda InitializeShape(), wykorzystywana przez wszystkie wyświetlane obiekty świata gry ustawia odpowiednie wymiary wyświetlanego kształtu oraz wypełnia go odpowiednim obrazem tła. Ponadto zadeklarowano abstrakcyjną klasę Draw() do rysowania obiektu, która jest implementowana przez klasy pochodne.
+
+OBIEKTY STATYCZNE
+BLOK
+[Block.cs oraz pozostałe klasy w folderze Blocks]
+Zadaniem gracza jest zbicie wszystkich bloków na planszy. Po tej klasie dziedziczą inne klasy bloków, które różnią się od siebie wyglądem oraz ilości uderzeń potrzebnych do zbicia bloku (stength). Blok może zawierać w sobie bonus, który wyskoczy z niego po zbiciu bloku - ma na niego referencję, początkowo ustawioną na null. Jeżeli jakiś bonus zostanie przypisany do bloku, null zostanie zastąpiony przez referencję na obiekt.
+
+Bloki są wyświetlane tak, jakby były elementami siatki - pole grid określa położenie na takiej siatce. Jeżeli blok znajduje się w 2 wierszu 3 kolumny takiej siatki, to jego pozycja (pos - przesyłane jest do niej położenie środka obiektu) zostanie określona przez punkt (2 * długość bloku + długość bloku / 2, 3 * wysokość bloku + wysokość bloku / 2).
+
+Funkcja ChangeGridRowColor() jest wywoływana po zbiciu bloku. Sprawia ona, że tłem bloku przestaje być obrazek - zostaje ono ustawione na null, czyli blok przestaje być wyświetlany na ekranie.
+
+SKRZYNIA ZWYCIĘSTWA
+[Chest.cs]
+Skrzynia zwycięstwa jest domyślnie zamknięta. Kiedy bonus zmienia jej stan - zostaje otwarta (Open()) lub zamknięta (Close()), zmienia się jej obrazek. Aby wygrać, gracz musi trafić piłką w jej dolną krawędź na planszy. Zawiera pole isClosed określające, czy jest ona zamknięta, czy nie.
+
+OBIEKTY DYNAMICZNE
+PALETKA
+[Paddle.cs]
+Zawiera pole typu bool - arrowKeysSwapped określające, czy jest aktywny bonus zamieniający miejscami klawisze lewo-prawo. W przypadku, gdy taki bonus został zebrany, wywoływana jest funkcja SwapArrowKeys(), która zamienia arrowKeysSwapped na wartość przeciwną (prawda->fałsz przy pierwszym zebraniu bonusu lub fałsz->prawda przy drugim zebraniu bonusu, przywracającym normalne działanie klawiszy strzałek). Aby ułatwić dostrzeżenie wystąpienia zamiany klawiszy, ustawiany jest odmienny obrazek tła paletki. 
+
+MoveToDefaultPosition() przywraca paletkę do domyślnego położenia np. po utracie życia. Jeśli klawisze lewo-prawo zostały zamienione, zamiana ta zostaje unieważniona.
+
+Detekcja wciśnięcia klawiszy strzałek odbywa się w funkcjach LeftArrowKeyPressed() oraz RightArrowKeyPressed(). Sposób przemieszczania się paletki został opisany w komentarzach w kodzie, w pliku Paddle.cs [Move(), MoveLeft(), MoveRight()].
+
+BONUS
+[Bonus.cs oraz pozostałe klasy w folderze Bonus]
+Po zbiciu bloku, może z niego wypaść bonus, który będzie spadał pionowo w dół. Jeśli gracz złapie go paletką, bonus zostanie uaktywniony. Może zadziałać na gracza tak pozytywnie, jak i negatywnie. Rodzaj bonusu jest losowany w GameControllerze. Po tej klasie dziedziczą klasy bonusów, różniących się od siebie działaniem.
+
+Zawiera referencję na paletkę (w celu wykrycia kolizji z nią podczas spadania) oraz pole typu bool - isActive określające, czy bonus jest aktywny. Zawiera abstrakcyjną funkcję Work() implementowaną przez klasy pochodne, w której określona jest funkcja działania bonusu - np. zmniejszenie liczby żyć gracza. Klasy pochodne (np. CloseChestBonus) w konstruktorze wywołują konstruktor klasy bazowej.
+
+Sposób przemieszczania się bonusu został opisany w komentarzach w kodzie, w pliku Bonus.cs [Move()]. Kolizja następuje, gdy blok znajduje się na wysokości paletki (isPaddleAndBonusOnTheSameHeight()) oraz gdy prawidziwe jest jedno z poniższych zdań:
+- jego prawa krawędź znajduje się dalej (w domyśle: lewej krawędzi ekranu) niż lewa krawędź paletki + jego prawa krawędź znajduje się bliżej niż lewa krawędź paletki (CollisionRightEdge())
+- jego lewa krawędź znajduje się dalej niż lewa krawędź paletki + jego lewa krawędź znajduje się bliżej niż prawa krawędź paletki (CollisionLeftEdge()).
+ 
+PIŁKA.
+[Ball.cs]
+Jako, że jej ruch to złożenie ruchu w pionie i poziomie, zawiera oddzielne pola na prędkość w pionie (vy) i w poziomie (vx). Prędkości te otrzymywane są po przemnożeniu współczynników prędkości speedx i speedy przez funkcje trygonometryczne w Move(). Współczynniki określają domyślną prędkość poruszania się piłki w każdym z kierunków oraz jej zwrot. Jeśli piłka porusza się w lewo, speedx będzie ujemne, jeśli w górę - speedy ujemne. Zawiera też referencję na paletkę (w celu wykrycia kolizji z nią) oraz referencję na listę bloków (również w celu wykrycia kolizji). Wymiary zostały zastąpione promieniem (r). BounceAngle reprezentuje kąt w deg, pod którym zostanie odbita piłka. Property Speed zostało opisane w filmiku, jego celem jest utrzymanie prędkości piłki na rozsądnym poziomie. Gdyby piłka wskutek działania bonusów poruszała się za szybko, gracz nie miałby szans za nią nadążyć, a gdyby poruszała się za wolno - znudziłby się i zrezygnował z gry. Poprzez zastosowanie "new" następuje zasłonięcie property o tej samej nazwie z klasy DynamicObject.
+ 
+Początkowo piłka po starcie gry poruszała się pionowo, jednak w finalnej wersji gry porusza się ona pod lekkim kątem. Realizowane jest to w MoveToDefaultPosition(), w "bounceAngle = degToRad(10)". Intuicyjniej pracuje się na radianach, toteż napisałem funkcję zamieniającą wartości deg na rad.
+
+Ruch piłki oraz kolizja zostały dokładnie opisane w komentarzach w kodzie, w pliku Ball.cs [od 83 linijki do końca pliku]. W skrócie:
+- Ruch piłki inicjuje funkcja Move(). Na początku wyliczane są prędkości w pionie oraz poziomie.
+- Piłka poruszając się po skosie, normalnie poruszałaby się szybciej. Aby tego uniknąć, w funkcji CorrectVelocity(), jeśli prędkość piłki w poziomie jest znaczna, zmniejszam ją proporcjonalnie do jej wartości.
+- W Collision najpierw sprawdzana jest kolizja w pionie. Jeśli tam kolizja nastąpiła, nastąpiło też odbicie w funkcji BounceVertically(). Wówczas piłka zamiast "wejść" w kolidujacą powierzchnię, chwilowo się do niej "przykleja", a jej współczynnik prędkości w pionie zmienia zwrot - jeśli poruszała się w dół, zacznie poruszać się w górę itd.
+- Jeśli nastąpiła kolizja w pionie, nie ma sensu sprawdzać jej w poziomie. Bool "was" oznacza, że wystąpiła kolizja w pionie.
+- Jeśli nie wystąpiła kolizja w pionie, to sprawdzana jest kolizja w poziomie. Tutaj piłka może ulec odbiciu poziomemu w funkcji BounceHorizontally().
+ 
+Podczas wykrywania kolizji w poziomie używana jest funkcja FindCollidingBlock(). Jej zmienna lokalna newPosy wyznacza wysokość, na jakiej znajdzie się piłka po wykonaniu ruchu. Po podzieleniu newPosy przez wysokość bloku otrzymywany jest numer wiersza siatki bloków, na którym znajdzie się piłka. Dla wszystkich bloków z tego wiersza nastąpi sprawdzenie, czy piłka wejdzie z którymś z nich w kolizję.
+
+VI. WCZYTYWANIE I ZAPISYWANIE POZIOMÓW
+[GameController.cs / LevelEditor.xaml.cs / MainWindow.xaml.cs]
+Utworzyłem klasę SerializableBlock, której zadaniem jest przechowywanie podstawowych informacji o serializowanych blokach. Podczas zapisywania etapu w edytorze poziomów następuje przepisanie bloków typu BlockButton na obiekty typu SerializableBlock. Tworzona jest lista tych obiektów, i następnie jest ona serializowana. Podczas wczytywania poziomu lista ulega deserializacji, zaś jej elementy - typu SerializableBlock - zamieniane są na obiekty klas pochodnych klasy Block.
+
+Zapisany poziom składa się z dwóch zserializowanych plików .xml. Pierwszy - nagłówkowy, z końcówką "_dat" - przechowuje liczbę bloków każdego rodzaju (np. ile jest bloków typu Grass, Brick itd) oraz liczbę żyć przewidzianą na poziom. W drugim pliku (z końcówką "_blc") znajduje się zserializowana lista bloków.
+
+Funkcja, która wczytuje bloki, to MainWindow.InitializeBlocks(). Na początku ustalona zostaje wysokość, na której kończy się siatka możliwych do wyświetlenia bloków. Potem następuje deserializacja listy zapisanych bloków w funkcji GameController.Deserialize(). Deserializacja odbywa się przy pomocy klas XmlSerializer oraz TextReader. Najpierw tworzona jest dynamicznie tablica intów, w której znajdą się dane ze zdeserializowanego nagłówka. Następnie deserializacji ulega lista bloków. Dzięki zastosowaniu słowa kluczowego using po wyjściu z bloku używany obiekt zostaje automatycznie zwolniony. Po powrocie z funkcji Deserialize() dla każdego wczytanego obiektu klasy SerializableBlock w pętli foreach tworzony jest nowy blok w funkcji GameController.CreateBlock(). 
+
+VII. MECHANIKA GRY - GAME CONTROLLER
+[GameController.cs]
+Zasada działania pętli gry została opisana w filmiku (użycie DispatcherTimer).
+
+StartNewLevel() odpowiada za rozpoczęcie nowej gry. Na początku następuje zatrzymanie licznika (jeśli wcześniej działał), potem następuje inicjalizacja bonusów - opisana w filmiku oraz szczegółowo w komentarzach w pliku GameController.cs [od linijki 449 do 500]. Następnie do canvasGame zostają dodane kolejne kształty świata gry - paletka oraz piłka, które następnie są wyświetlane w odpowiedniej pozycji [linijki 129 - 134]. 
+ 
+W funkcji LoadLives() inicjalizowane są wyświetlane życia (w grze występują pod postacią serduszek w lewym dolnym rogu ekranu). Ich obrazki znajdują się na liście imgHearts - zawiera ona tyle elementów, ile żyć ma do dyspozycji gracz. Na początku, jeśli jakieś życia były już wcześniej wyświetlane, są one usuwane z canvasGame, zaś sama lista żyć jest czyszczona. Następnie w pętli dla każdego wyświetlanego życia:
+- tworzony jest nowy obiekt klasy Canvas - imgHeart - i określane są jego wymiary.
+- imgHeart jest dodawany do listy wyświetlanych żyć oraz do canvasGame.
+- Ustalany jest priorytet wyświetlania imgHeart.
+W DrawLives() rysowane są życia na ekranie - każde kolejne życie rysowane jest nieco dalej w poziomie niż poprzednie. Na samym końcu StartNewLevel() włączany jest licznik gry (StartTimer()).
+
+HitBlock() realizuje obsługę uderzenia bloku przez piłkę. Początkowo zmniejszana jest jego wytrzymałość, a jeśli spadła ona do zera, to znika on z planszy. W takim wypadku najpierw tło bloku zmienia się na przezroczyste, potem następuje usunięcie bloku z listy bloków, i jeśli zawierał bonus - zostaje on uaktywniony. Wówczas kształt bonusu zostaje dodany do canvasGame, bonus zostaje dodany do listy aktywnych bonusów oraz jego pole isActive zostaje ustawione na true. Na sam koniec funkcji następuje sprawdzenie, czy lista pozostałych na planszy bloków jest pusta - jeśli tak, wszystkie bloki zostały zbite i następuje obsługa wygranej poprzez wywołanie funkcji Win(). W niej zatrzymywany jest licznik, z planszy usuwane sę elementy świata gry w celu poprawnego wyświetlenia menu. Stan gry jest zmieniany na GameStates.win, a w funkcji MainWindow.ShowMenuWin() wyświetlane jest menu wygranej.
+
+Jeśli piłka wypadnie poza dolną granicę gry, wywoływana jest funkcja LifeLost(). Wywołuje ona DecreaseLives(). Najpierw zmniejszana jest liczba zyć. Jeśli gracz ma więcej żyć, z listy canvasGame usuwany jest ostatni element listy wyświetlanych żyć imgHearts (ostatnie wyświetlane życie od prawej), nastepnie jest on usuwany również z listy imgHearts. Na koniec następuje ponowne narysowanie żyć.
+Jeśli po wypadnięciu piłki poza pole gry graczowi nie pozostało ani jedno życie, następuje przegrana. Wstrzymywany jest licznik, z planszy usuwane sę elementy świata gry w celu poprawnego wyświetlenia menu. Stan gry jest zmieniany na GameStates.failure, i w funkcji MainWindow.ShowMenuFailure() wyświetlane jest menu przegranej.
+
+Działanie bonusów zostało opisane w liniach [248 - 325]. Każdy bonus aktualizuje pole Header elementu MenuItem o nazwie bonusName o odpowiedni tekst informujący, jak bonus wpłynął na rozgrywkę.
+
+VIII. EDYTOR POZIOMÓW
+[LevelEditor.xaml]
+Schemat edytora poziomów jest bardzo podobny do schematu głównego okna. Inna jest zawartość DockPanelu. Zamiast przycisków na belce menu została użyta jednowierszowa siatka typu Grid. Zawiera ona 4 kolumny. ich zawartością są obiekty typu Label oraz TextBox. Ich przynależność do poszczególnych kolumn określa Grid.Column="wartość".
+Komórki dwóch z tych kolumn zawierają elementy typu Label służące do wyświetlania tekstu. Szerokość tych kolumn dostosowuje się do długości tekstu zawartego w Label. Komórki dwóch pozostałych kolumn zawierają pola tekstowe typu TextBox, a ich długość została sztywno ustawiona na 200. Do TextBoxa textBoxLives została przypisana funkcja walidująca NumberValidationTextBox() pozwalająca na wpisywanie tylko cyfr 0-9 (PreviewTextInput="NumberValidationTextBox"). Ostatnia kolumna zawiera także przycisk typu Button, którego obsługa znajduje się w SaveButtonHandler().
+
+Ponadto została zdefiniowana siatka blocksGrid, której komórki zawierają elementy typu BlockButton.
+
+[BlockButton.cs]
+Klasa BlockButton ziedziczy po klasie Button. Reprezentuje blok na siatce bloków. Pola gridx i gridy opisują położenie na tej siatce. Po kliknięciu na element siatki (przycisk BlockButton) pojawia się obrazek trawy, reprezentujący ustawienie w tym miejscu bloku typu GreenBlock. Kolejne kliknięcia powodują zamianę poprzedniego obrazka na inny, reprezentujący inny typ bloku. Po odpowiedniej liczbie kliknięć pojawia się na powrót blok pusty, reprezentujący puste miejsce na planszy. Zliczanie kliknięć ma miejsce w funkcji ChangleBlockType(), wywoływanej po kliknięciu przycisku. Wówczas pole typu bloku zwiększane jest o 1 i następuje wykonanie operacji typ bloku modulo liczba bloków. Wynik reprezentuje jeden z elementów enum BlockTypes.
+
+[LevelEditor.xaml.cs]
+W konstruktorze inicjalizowana jest lista przycisków typu BlockButton. Następnie TextBoxowi z nazwą poziomu przypisywana jest nazwa domyślna, a do textBoxa z liczbą żyć przypisywana jest domyślna liczba żyć przekonwertowana z inta na stringa. Zostają ustalone wymiary okna oraz wywoływana jest funkcja InitializeGrid(). W niej ustalany jest kolor tła okna edytora oraz ustawiane są linie siatki. Następnie w pętli tworzona jest siatka przycisków. Najpierw tworzona jest jej kolumna, ustawiana jest jej szerokość oraz zostaje ona dodana do kolumn siatki. Następnie tworzone są komórki, które zostaną przyporządkowane danej kolumnie. Tworzony jest wiersz, zostaje ustalona jego wysokość, po czym zostaje on dodany do wierszy siatki. Tworzony jest przycisk typu BlockButton, zostaje on dodany do listy przycisków. Na koniec przycisk jest przypisywany do odpowiedniej kolumny i wiersza oraz zostaje dodany do siatki.
+
+Dzięki zastosowaniu w NumberValidationTextBox() wyrażenia regularnego przy użyciu obiektu typu Regex do TextBoxa z liczbą żyć można wpisać jedynie cyfry 0-9. Kiedy zostanie wciśnięty przycisk zapisania poziomu, wywoływana jest funkcja SaveLevel(). Na początku tworzona jest w niej tablica intów, do której zostanie przypisana ilość bloków danego typu występujących w zapisywanym poziomie oraz liczba żyć przewidziana na poziom. Na zerowym miejscu będzie liczba bloków trawy, na pierwszym liczba bloków lodu itd. Następnie bloki są zliczane w funkcji CountBlocks(), gdzie program iterując po wszystkich przyciskach w tablicy buttons wydobywa z przycisku jego typ zwiększając odpowiednią komórkę tablicy dla tego typu.
+
+Następnie wywoływana jest funkcja GedDataFromTextBoxes() - wydobywane są tam dane z TextBoxów. Jeśli użytkownik nie podał żadnej liczby w polu żyć, liczba ta zostaje ustawiona na 1. Jeżeli podał tam liczbę, to - jako, że mamy do czynienia z TextBoxem - musi ona zostać przekonwertowana z tekstu na typ int. Na koniec zapisywana jest nazwa poziomu zdefiniowana przez użytkownika. 
+
+Do tablicy nagłówka przypisywana jest ostatnia potrzebna liczba - życia przewidziane na poziom. Potem tworzona jest lista bloków typu SerializableBlock, której elementy zostaną zserializowane. W CreateSerializableList() tworzone są elementy tej listy. W pętli foreach wybierane są te bloki z listy buttons, których tło było inne niż BlockTypes.none, czyli wybierane są tylko te przyciski, które po kliknięciu przez użytkownika otrzymały obrazek tła. Dla każdego takiego bloku tworzony jest obiekt typu SerializableBlock, któremu zostają przekazane w konstruktorze dane niezbędne do poprawnego wyświetlenia go w aplikacji - jego typ oraz położenie na siatce bloków. Następnie blok ten zostaje dodany do listy, która zostanie potem zserializowana.
+
+Serializacja ma miejsce w funkcji Serialize(). Jest ona bardzo podobna do wcześniej opisanej funkcji GameController.Deserialize() z tym wyjątkiem, że używane są klasy StringWriter, TextWriter oraz StreamWriter. Po deserializacji nagłówka oraz listy bloków wywoływana jest funkcja MainWindow.FindLevels(). W ten sposób w oknie głównym programu zostaje zaktualizowana lista poziomów, dzięki czemu od razu po przejściu do głównego okna można rozpocząć rozgrywkę na nowoutworzonym poziomie. Następnie zamykane jest okno edytora poziomów, akcja wraca z powrotem do głównego okna aplikacji.
 
